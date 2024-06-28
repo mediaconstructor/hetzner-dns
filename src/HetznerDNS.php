@@ -5,11 +5,19 @@ namespace HetznerDNS;
 class HetznerDNS {
 
   private $api_token;
+  /** @var \CurlHandle|false|null $curl_handle Reusable curl handle */
+  private $curl_handle = null;
 
   public function __construct(array $options){
 
     $this->api_token = trim($options['api_token']);
 
+  }
+  public function __destruct(){
+      if (is_null($this->curl_handle)) {
+          return;
+      }
+    curl_close($this->curl_handle);
   }
 
   private function error($message){
@@ -25,37 +33,36 @@ class HetznerDNS {
 
   private function curl($method, $url, array $options = null, $body = null){
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, 'https://dns.hetzner.com/api/v1' . $url);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($this->curlHandle(), CURLOPT_URL, 'https://dns.hetzner.com/api/v1' . $url);
+    curl_setopt($this->curlHandle(), CURLOPT_CUSTOMREQUEST, $method);
+    curl_setopt($this->curlHandle(), CURLOPT_RETURNTRANSFER, 1);
 
     $headers = [
       'Auth-API-Token: ' . $this->api_token,
     ];
 
     if($method == 'POST' || $method == 'PUT'){
-    
-      curl_setopt($ch, CURLOPT_POST, 1);
+
+      curl_setopt($this->curlHandle(), CURLOPT_POST, 1);
 
       if(!empty($body)){
 
         array_push($headers, 'Content-Type: text/plain');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+        curl_setopt($this->curlHandle(), CURLOPT_POSTFIELDS, $body);
 
       } else {
 
         array_push($headers, 'Content-Type: application/json');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($options));
+        curl_setopt($this->curlHandle(), CURLOPT_POSTFIELDS, json_encode($options));
 
       }
 
     }
 
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($this->curlHandle(), CURLOPT_HTTPHEADER, $headers);
 
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $response = curl_exec($ch);
+    $status = curl_getinfo($this->curlHandle(), CURLINFO_HTTP_CODE);
+    $response = curl_exec($this->curlHandle());
 
     switch ($status) {
       case '200':
@@ -88,8 +95,18 @@ class HetznerDNS {
 
     return json_decode($response, true); //Respone in array
 
-    curl_close($ch);
+  }
 
+    /**
+     * Get a curl handle
+     * @return \CurlHandle|false
+     */
+  private function curlHandle(){
+    if (null === $this->curl_handle) {
+      $this->curl_handle = curl_init();
+    }
+
+    return $this->curl_handle;
   }
 
   //Create DNS zone
