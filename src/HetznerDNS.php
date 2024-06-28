@@ -26,9 +26,6 @@ class HetznerDNS {
       'result' => 'error',
       'message' => $message
     );
-
-    exit();
-
   }
 
   private function curl($method, $url, array $options = null, $body = null){
@@ -69,28 +66,22 @@ class HetznerDNS {
         break;
 
       case '400':
-        $this->error('Pagination selectors are mutually exclusive');
-        break;
+        return $this->error('Pagination selectors are mutually exclusive');
 
       case '401':
-        $this->error('Unauthorized');
-        break;
+        return $this->error('Unauthorized');
 
       case '403':
-        $this->error('Forbidden');
-        break;
+        return $this->error('Forbidden');
 
       case '404':
-        $this->error('Not Found');
-        break;        
+        return $this->error('Not Found');
 
       case '406':
-        $this->error('Not acceptable');
-        break;
+        return $this->error('Not acceptable');
 
       case '422':
-        $this->error('Unprocessable entity');
-        break;
+        return $this->error('Unprocessable entity');
     }
 
     return json_decode($response, true); //Respone in array
@@ -149,7 +140,7 @@ class HetznerDNS {
 
   //Get DNS zone
   public function getZone($id){
-    
+
     return $this->curl('GET', '/zones/' . $id);
 
   }
